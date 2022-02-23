@@ -50,30 +50,22 @@ Node(classdef,
 class FixRemoveClass(BaseFix):
 
     PATTERN = """
-      classdef< 'class' name=any '(' 'TestCase' ')' ':'
+      classdef< 'class' name=any '(' any ')' ':'
          suite=suite
       >
     """
 
-    def dedent(self, suite, dedent):
-        self.line_num = suite.get_lineno()
+    def dedent(self, suite):
         for kid in suite.leaves():
-            if kid.type in (token.INDENT, token.DEDENT):
-                self.line_num = kid.get_lineno()
-                # todo: handle tabs
-                kid.value = kid.value[dedent:]
-                self.current_indent = kid.value
-            elif kid.get_lineno() != self.line_num:
-                # todo: handle tabs
-                if len(kid.prefix) > len(self.current_indent):
-                    kid.prefix = self.current_indent
+            if kid.value == 'def':
+                kid.prefix = ''
             
 
     def transform(self, node, results):
         suite = results['suite'].clone()
+        
         # todo: handle tabs
-        dedent = len(find_indentation(suite)) - len(find_indentation(node))
-        self.dedent(suite, dedent)
+        self.dedent(suite)
 
         # remove the first newline behind the classdef header
         first = suite.children[0]
@@ -82,5 +74,7 @@ class FixRemoveClass(BaseFix):
                 del suite.children[0]
             else:
                 first.value == first.value[1:]
+        for child in suite.children:
+            child.children = [c for c in child.children if c.type != 278]
 
         return suite

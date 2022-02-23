@@ -33,7 +33,7 @@ def generate_new_file(test_dir, output_dir):
                     write_place['"' + filename + '"'] = string_name
         fp.write('@pytest.fixture\ndef models():\n    return ')
         fp.write(str(models_dict).replace('\'', ''))
-    os.system("black %s" % os.path.join(output_dir, 'models.py'))
+    os.system("black %s" % os.path.join(output_dir, 'utils.py'))
 
     # create new python files
     python_files = []

@@ -1,5 +1,6 @@
 from cgi import test
 import os
+import shutil
 import argparse
 
 
@@ -33,6 +34,17 @@ def generate_new_file(test_dir, output_dir):
                     write_place['"' + filename + '"'] = string_name
         fp.write('@pytest.fixture\ndef models():\n    return ')
         fp.write(str(models_dict).replace('\'', ''))
+
+    # move seed.sql and create code to run it
+    seed_copied = False
+    for dirpath, _, filenames in os.walk(test_dir):
+        for filename in filenames:
+            if filename == 'seed.sql':
+                os.makedirs(os.path.join(output_dir, 'data'), exist_ok=True)
+                shutil.copyfile(os.path.join(dirpath,'seed.sql'), os.path.join(output_dir, 'data', 'seed.sql'))
+                seed_copied = True
+                break
+
     os.system("black %s" % os.path.join(output_dir, 'fixtures.py'))
 
     # create new python files
@@ -47,7 +59,19 @@ import pytest
 
 from dbt.tests.util import run_dbt
 from tests.%s.fixtures import models
+
+
                     """ % '.'.join(output_dir.split('/')[-2:]))
+                    if seed_copied:
+                        fp.write("""
+# seed.sql copied, you can run it by
+# project.run_sql_file(os.path.join(project.test_data_dir, "seed.sql"))
+
+# if things in seed.sql is not very complex, you can also convert it to run
+# using the standard seed fixture. example at
+# https://github.com/dbt-labs/dbt-core/blob/main/tests/functional/graph_selection/fixtures.py#L173
+                        """
+                        )
 
                 
                 

@@ -57,6 +57,7 @@ class FixRemoveClass(BaseFix):
 
     def dedent(self, suite):
         for kid in suite.leaves():
+
             if kid.value == 'def':
                 kid.prefix = ''
             
@@ -74,7 +75,59 @@ class FixRemoveClass(BaseFix):
                 del suite.children[0]
             else:
                 first.value == first.value[1:]
+
+        # # remove tab, issue with this is that it only removes the first one
+        # suite.children = [c for c in suite.children if c.type != 5]
+
+
+        # remove all decorator
         for child in suite.children:
             child.children = [c for c in child.children if c.type != 278]
+        
+        for child in suite.children:
+            # if it is a decorator, go down a level
+            if child.type == 277:
+                child = child.children[0]
+            # if it is a function definition, start doing something
+            if child.type == 295:
+                function_def = child
+                parameters = function_def.children[2]
+                function_name = function_def.children[1]
+
+                # this will replace self argument in test function definition to project
+                if function_name.value.startswith('test'):
+                    parameters.children[1].value = 'project'
+
+                # all things defined in a function
+                function_content = function_def.children[4]
+                
+                # this part removes self. in the code
+                prev_is_self = False
+                for leaf in function_content.leaves():
+                    # remove . after self
+                    if prev_is_self and leaf.type == 23:
+                        leaf.value = ''
+                    if leaf.value == 'self':
+                        leaf.value = ''
+                        prev_is_self = True
+                    else:
+                        prev_is_self = False 
+                    
+                    # this would add project. in the beginning of run_sql_file
+                    if leaf.value == 'run_sql_file':
+                        leaf.prev_sibling.value = '.'
+                        leaf.parent.parent.children[0].value = 'project'
+                    
+                    # this would add table_comp. in the beginning of assertTablesEqual
+                    if leaf.value == 'assertTablesEqual':
+                        leaf.prev_sibling.value = '.'
+                        leaf.parent.parent.children[0].value = 'table_comp'
+
+                    # if you want to replace a function, can do it by 
+                    # if leaf.value == 'original name':
+                    #     leaf.value == 'replaced name'
+                    
+
+                
 
         return suite

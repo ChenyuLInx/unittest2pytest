@@ -9,7 +9,7 @@ def generate_new_file(test_dir, output_dir):
     
     # copy all of the things in models to one place
     models_dict = {}
-    with open(os.path.join(output_dir, 'utils.py'), 'w') as fp:
+    with open(os.path.join(output_dir, 'fixtures.py'), 'w') as fp:
         fp.write('import pytest\n\n\n')
         for dirpath, _, filenames in os.walk(test_dir):
             path = dirpath.split('/')
@@ -33,7 +33,7 @@ def generate_new_file(test_dir, output_dir):
                     write_place['"' + filename + '"'] = string_name
         fp.write('@pytest.fixture\ndef models():\n    return ')
         fp.write(str(models_dict).replace('\'', ''))
-    os.system("black %s" % os.path.join(output_dir, 'utils.py'))
+    os.system("black %s" % os.path.join(output_dir, 'fixtures.py'))
 
     # create new python files
     python_files = []
@@ -46,7 +46,7 @@ def generate_new_file(test_dir, output_dir):
 import pytest
 
 from dbt.tests.util import run_dbt
-from tests.%s.utils import models
+from tests.%s.fixtures import models
                     """ % '.'.join(output_dir.split('/')[-2:]))
 
                 

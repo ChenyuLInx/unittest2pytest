@@ -19,10 +19,11 @@ def generate_new_file(test_dir, output_dir):
     with open(os.path.join(output_dir, 'fixtures.py'), 'w') as fp:
         fp.write('import pytest\n')
         fp.write('from dbt.tests.fixtures.project import write_project_files\n\n\n')
+        test_dir_name = test_dir.split('/')[-1]
         for dirpath, _, filenames in os.walk(test_dir):
             path = dirpath.split('/')
             # skip files in the test root
-            if path[-1] != test_dir.split('/')[-1] and not path[-1].endswith('__'):
+            if path[-1] != test_dir_name and not path[-1].endswith('__'):
                 dir_name = path[-1]
                 dir_dict = {}
                 all_dir[dir_name] = dir_dict
@@ -37,7 +38,8 @@ def generate_new_file(test_dir, output_dir):
                 # add it to models dict
                 for filename in filenames:
                     if not filename.endswith('pyc'):
-                        string_name = filename.replace('.', '_')
+                        whole_file_path = os.path.join(*path[path.index(test_dir_name) + 1:], filename)
+                        string_name = whole_file_path.replace('.', '_').replace('/', '_').replace('-', '_')
                         fp.write(string_name + ' = """\n')
                         with open(os.path.join(dirpath, filename)) as f:
                             for line in f.readlines():

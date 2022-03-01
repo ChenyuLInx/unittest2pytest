@@ -14,6 +14,8 @@ def generate_new_file(test_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     
     # convert all the dir with files in it to pytest fixture
+
+    # this is the place that stores the dir structure of test repo
     all_dir = {}
     with open(os.path.join(output_dir, 'fixtures.py'), 'w') as fp:
         test_dir_name = test_dir.split('/')[-1]
@@ -23,27 +25,30 @@ def generate_new_file(test_dir, output_dir):
         fp.write('from dbt.tests.fixtures.project import write_project_files\n\n\n')
 
         for dirpath, _, filenames in os.walk(test_dir):
-            path = dirpath.split('/')
-            # test root dir, cache dirs and empty dirs
-            if path[-1] != test_dir_name and not path[-1].endswith('__') and filenames:
-                dir_name = path[path.index(test_dir_name) + 1]
-                if dir_name in all_dir:
-                    dir_dict = all_dir[dir_name]
-                else:
-                    dir_dict = {}
-                    all_dir[dir_name] = dir_dict
-                # make sure the path exists in 
-                model_dict_path = path[path.index(test_dir_name) + 2:]
-                write_place = dir_dict
+            curr_path = dirpath.split('/')
+
+            # skip test root dir, cache dirs and empty dirs
+            if curr_path[-1] != test_dir_name and not curr_path[-1].endswith('__') and filenames:
+
+                # curr dir entry is the top level dir name in a test project for the current dirpath
+                curr_dir_entry_name = curr_path[curr_path.index(test_dir_name) + 1]
+                # add current dir entry name to all_dir if it is not there
+                if curr_dir_entry_name not in all_dir:
+                    all_dir[curr_dir_entry_name] = {}
+
+                # traverse through all_dir to build dictionary path to current dir
+                write_place = all_dir[curr_dir_entry_name]
+                model_dict_path = curr_path[curr_path.index(test_dir_name) + 2:]
                 for dir in model_dict_path:
                     if '"' + dir + '"' not in write_place:
                         write_place['"' + dir + '"'] = {}
                     write_place = write_place['"' + dir + '"']
+
                 # convert all the files to string
-                # add it to models dict
+                # and add the file in all_dir
                 for filename in filenames:
                     if not filename.endswith('pyc'):
-                        whole_file_path = os.path.join(*path[path.index(test_dir_name) + 1:], filename)
+                        whole_file_path = os.path.join(*curr_path[curr_path.index(test_dir_name) + 1:], filename)
                         string_name = whole_file_path.replace('.', '_').replace('/', '__').replace('-', '_')
                         fp.write(string_name + ' = """\n')
                         with open(os.path.join(dirpath, filename)) as f:
@@ -51,9 +56,11 @@ def generate_new_file(test_dir, output_dir):
                                 fp.write(line)
                         fp.write('"""\n\n')
                         write_place['"' + filename + '"'] = string_name
+        # write all of the fixture for dirs in a project
         for dir_name, dir_dict in all_dir.items():
             write_dir_fixture(fp, dir_name, dir_dict)
         
+        # create the project_files fixture
         fp.write('@pytest.fixture\ndef project_files(project_root,')
         for dir_name in all_dir.keys():
             fp.write(' %s,' % dir_name.replace('-', '_'))

@@ -4,20 +4,31 @@ import shutil
 import argparse
 
 
+def write_dir_fixture(fp, dir_name, dir_dic):
+    fp.write('@pytest.fixture\ndef %s():\n    return ' % dir_name.replace('-', '_'))
+    fp.write(str(dir_dic).replace('\'', ''))
+    fp.write('\n\n')
+
 def generate_new_file(test_dir, output_dir):
     
     os.makedirs(output_dir, exist_ok=True)
     
     # copy all of the things in models to one place
     models_dict = {}
+    all_dir = {}
     with open(os.path.join(output_dir, 'fixtures.py'), 'w') as fp:
-        fp.write('import pytest\n\n\n')
+        fp.write('import pytest\n')
+        fp.write('from dbt.tests.fixtures.project import write_project_files\n\n\n')
         for dirpath, _, filenames in os.walk(test_dir):
             path = dirpath.split('/')
-            if 'models' in path:
+            # skip files in the test root
+            if path[-1] != test_dir.split('/')[-1] and not path[-1].endswith('__'):
+                dir_name = path[-1]
+                dir_dict = {}
+                all_dir[dir_name] = dir_dict
                 # make sure the path exists in 
-                model_dict_path = path[path.index('models') + 1:]
-                write_place = models_dict
+                model_dict_path = path[path.index(dir_name) + 1:]
+                write_place = dir_dict
                 for dir in model_dict_path:
                     if '"' + dir + '"' not in write_place:
                         write_place['"' + dir + '"'] = {}
@@ -25,15 +36,28 @@ def generate_new_file(test_dir, output_dir):
                 # convert all the files to string
                 # add it to models dict
                 for filename in filenames:
-                    string_name = filename.replace('.', '_')
-                    fp.write(string_name + ' = """\n')
-                    with open(os.path.join(dirpath, filename)) as f:
-                        for line in f.readlines():
-                            fp.write(line)
-                    fp.write('"""\n\n')
-                    write_place['"' + filename + '"'] = string_name
-        fp.write('@pytest.fixture\ndef models():\n    return ')
-        fp.write(str(models_dict).replace('\'', ''))
+                    if not filename.endswith('pyc'):
+                        string_name = filename.replace('.', '_')
+                        fp.write(string_name + ' = """\n')
+                        with open(os.path.join(dirpath, filename)) as f:
+                            for line in f.readlines():
+                                fp.write(line)
+                        fp.write('"""\n\n')
+                        write_place['"' + filename + '"'] = string_name
+        for dir_name, dir_dict in all_dir.items():
+            write_dir_fixture(fp, dir_name, dir_dict)
+        
+        fp.write('@pytest.fixture\ndef project_files(project_root,')
+        for dir_name in all_dir.keys():
+            fp.write(' %s,' % dir_name.replace('-', '_'))
+        fp.write('):\n')
+        # write_project_files(project_root, "models", models)
+        for dir_name in all_dir.keys():
+            fp.write('    write_project_files(project_root, "%s", %s)\n' % (dir_name, dir_name.replace('-', '_')))
+        fp.write('\n\n')
+        
+
+
 
     # move seed.sql and create code to run it
     seed_copied = False

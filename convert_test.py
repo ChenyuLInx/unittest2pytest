@@ -82,7 +82,7 @@ def generate_new_file(test_dir, output_dir):
 import pytest
 
 from dbt.tests.util import run_dbt
-from tests.%s.fixtures import models
+from tests.%s.fixtures import project_files
 
 
                     """ % '.'.join(output_dir.split('/')[-2:]))

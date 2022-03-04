@@ -9,6 +9,12 @@ def write_dir_fixture(fp, dir_name, dir_dic):
     fp.write(str(dir_dic).replace('\'', ''))
     fp.write('\n\n')
 
+def line_prepender(filename, line):
+    with open(filename, 'r+') as f:
+        content = f.read()
+        f.seek(0, 0)
+        f.write(line.rstrip('\r\n') + '\n' + content)
+
 def generate_new_file(test_dir, output_dir):
     
     os.makedirs(output_dir, exist_ok=True)
@@ -85,23 +91,24 @@ def generate_new_file(test_dir, output_dir):
 
     os.system("black %s" % os.path.join(output_dir, 'fixtures.py'))
 
+    os.system('unittest2pytest -n -w %s --output-dir %s' % (test_dir, output_dir))
     # create new python files
     python_files = []
     for _, _, filenames in os.walk(test_dir):
         for filename in filenames:
             if filename.startswith('test') and filename.endswith('.py'):
                 python_files.append(filename)
-                with open(os.path.join(output_dir,filename), 'w') as fp:
-                    fp.write("""
+
+                line = """
 import pytest
 
 from dbt.tests.util import run_dbt
-from tests.%s.fixtures import project_files
+from tests.%s.fixtures import %s
 
 
-                    """ % '.'.join(output_dir.split('/')[-2:]))
-                    if seed_copied:
-                        fp.write("""
+                    """ % ('.'.join(output_dir.split('/')[-2:]), ','.join([dir_name.replace('-', '_') for dir_name in all_dir.keys()] + ['project_files']))
+                if seed_copied:
+                    line += """
 # seed.sql copied, you can run it by
 # project.run_sql_file(os.path.join(project.test_data_dir, "seed.sql"))
 
@@ -109,9 +116,27 @@ from tests.%s.fixtures import project_files
 # using the standard seed fixture. example at
 # https://github.com/dbt-labs/dbt-core/blob/main/tests/functional/graph_selection/fixtures.py#L173
                         """
-                        )
+                line_prepender(os.path.join(output_dir,filename), line)
+#                 with open(os.path.join(output_dir,filename), 'a') as fp:
+#                     fp.write("""
+# import pytest
 
-                
+# from dbt.tests.util import run_dbt
+# from tests.%s.fixtures import project_files
+
+
+#                     """ % '.'.join(output_dir.split('/')[-2:]))
+#                     if seed_copied:
+#                         fp.write("""
+# # seed.sql copied, you can run it by
+# # project.run_sql_file(os.path.join(project.test_data_dir, "seed.sql"))
+
+# # if things in seed.sql is not very complex, you can also convert it to run
+# # using the standard seed fixture. example at
+# # https://github.com/dbt-labs/dbt-core/blob/main/tests/functional/graph_selection/fixtures.py#L173
+#                         """
+#                         )
+    os.system("black %s" % os.path.join(output_dir))
                 
                 
 

@@ -28,6 +28,8 @@ __licence__ = "GNU General Public License version 3 or later (GPLv3+)"
 
 from lib2to3.fixer_base import BaseFix
 from lib2to3.fixer_util import token, find_indentation
+from lib2to3.pytree import Leaf
+from lib2to3.pytree import Node
 
 """
 Node(classdef, 
@@ -47,6 +49,18 @@ Node(classdef,
           Leaf(6, '')])])
 """
 
+
+def delete_multiple_element(list_object, indices):
+    indices = sorted(indices, reverse=True)
+    for idx in indices:
+        if idx < len(list_object):
+            list_object.pop(idx)
+
+def selector_update_func(node):
+    breakpoint()
+    node.children[4].children[2].children[0].children[1] = node.children[4].children[2].children[0].children[1].children[2].children[1]
+
+
 class FixRemoveClass(BaseFix):
 
     PATTERN = """
@@ -63,71 +77,130 @@ class FixRemoveClass(BaseFix):
             
 
     def transform(self, node, results):
-        suite = results['suite'].clone()
+        suite = results['suite']
         
         # todo: handle tabs
         self.dedent(suite)
 
         # remove the first newline behind the classdef header
-        first = suite.children[0]
-        if first.type == token.NEWLINE:
-            if len(first.value) == 1:
-                del suite.children[0]
-            else:
-                first.value == first.value[1:]
+        # first = suite.children[0]
+        # if first.type == token.NEWLINE:
+        #     if len(first.value) == 1:
+        #         del suite.children[0]
+        #     else:
+        #         first.value == first.value[1:]
 
         # # remove tab, issue with this is that it only removes the first one
         # suite.children = [c for c in suite.children if c.type != 5]
+
+
+        # remove integration Test inheretance
+        # deal with single and multiple inherent
+        if node.children[3].type != 260:
+            parent_classes = [node.children[3]]
+        else:
+            parent_classes = node.children[3].children
+
+        parent_classes_to_remove = ['DBTIntegrationTest']
+        for idx, parent_class in enumerate(parent_classes):
+            if parent_class.value in parent_classes_to_remove:
+                parent_class.value = ''
+                # remove , before and after the removed class
+                if idx < len(node.children[3].children) - 1 :
+                    node.children[3].children[idx + 1].value = ''
+                if idx > 0:
+                    node.children[3].children[idx - 1].value = ''
 
 
         # remove all decorator
         for child in suite.children:
             child.children = [c for c in child.children if c.type != 278]
         
-        for child in suite.children:
+
+        functions_to_remove = ['models', 'schema']
+        function_name_map = {
+            'project_config': 'project_config_update',
+            'selectors_config': 'selectors'
+        }
+        function_process_map = {
+            'selectors': selector_update_func
+        }
+        remove_idxes = []
+
+        for i, child in enumerate(suite.children):
             # if it is a decorator, go down a level
             if child.type == 277:
                 child = child.children[0]
+
             # if it is a function definition, start doing something
             if child.type == 295:
                 function_def = child
                 parameters = function_def.children[2]
                 function_name = function_def.children[1]
+                # print('=====%s====='%function_name)
+
+                if function_name.value in functions_to_remove:
+                    remove_idxes.append(i)
+                
+                # replace functions
+                if function_name.value in function_name_map:
+                    function_name.value = function_name_map[function_name.value]
+                    # add the fixture decorator
+                    dec_node = Node(278, [Leaf(50, '@'), Leaf(1, 'pytest.fixture\n    ')])
+                    func_node = child.clone()
+                    func_node.parent = None
+                    if function_name.value in function_process_map:
+                        function_process_map[function_name.value](func_node)
+                    suite.children[i] = Node(277, [dec_node, func_node])
+                    # breakpoint()
+                    continue
 
                 # this will replace self argument in test function definition to project
                 if function_name.value.startswith('test'):
-                    parameters.children[1].value = 'project'
+                    project_arg = parameters.children[1].clone()
+                    project_arg.value = ' project, '
+                    parameters.children[1].value += ','
+                    parameters.children.insert(2, project_arg)
+                    project_arg = parameters.children[1].clone()
+                    project_arg.value = ' project_files'
+                    parameters.children.insert(3, project_arg)
 
                 # all things defined in a function
                 function_content = function_def.children[4]
                 
-                # this part removes self. in the code
+                if '__postgres__' in function_name.value:
+                    function_name.value = function_name.value.replace('__postgres__', '_')
+                
+                # Update the functions that get changed between previous tests and current test
                 prev_is_self = False
                 for leaf in function_content.leaves():
                     # remove . after self
-                    if prev_is_self and leaf.type == 23:
-                        leaf.value = ''
-                    if leaf.value == 'self':
-                        leaf.value = ''
-                        prev_is_self = True
-                    else:
-                        prev_is_self = False 
+                    # if prev_is_self and leaf.type == 23:
+                    #     leaf.value = ''
+                    # if leaf.value == 'self':
+                    #     leaf.value = ''
+                    #     prev_is_self = True
+                    # else:
+                    #     prev_is_self = False 
                     
+                    # remove self. in front of run_dbt
+                    if leaf.value == 'run_dbt':
+                        leaf.prev_sibling.value = ''
+                        leaf.parent.parent.children[0].value = ''
                     # this would add project. in the beginning of run_sql_file
                     if leaf.value == 'run_sql_file':
-                        leaf.prev_sibling.value = '.'
                         leaf.parent.parent.children[0].value = 'project'
                     
                     # this would add table_comp. in the beginning of assertTablesEqual
                     if leaf.value == 'assertTablesEqual':
-                        leaf.prev_sibling.value = '.'
+                        # leaf.prev_sibling.value = '.'
                         leaf.parent.parent.children[0].value = 'table_comp'
-
-                    # if you want to replace a function, can do it by 
+                    
+                    # if you want to replace a function(used inside function), can do it by
                     # if leaf.value == 'original name':
                     #     leaf.value == 'replaced name'
-                    
 
-                
+        delete_multiple_element(suite.children, remove_idxes)
+         
 
-        return suite
+        # return suite

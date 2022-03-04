@@ -103,7 +103,7 @@ def generate_new_file(test_dir, output_dir):
 import pytest
 
 from dbt.tests.util import run_dbt
-from tests.%s.fixtures import %s
+from tests.%s.fixtures import %s # noqa, F401
 
 
                     """ % ('.'.join(output_dir.split('/')[-2:]), ','.join([dir_name.replace('-', '_') for dir_name in all_dir.keys()] + ['project_files']))

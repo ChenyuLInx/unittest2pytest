@@ -155,11 +155,11 @@ class FixRemoveClass(BaseFix):
                     continue
 
                 # this will replace self argument in test function definition to project
-                if function_name.value.startswith('test'):
-                    project_arg = parameters.children[1].clone()
-                    project_arg.value = ' project, '
-                    parameters.children[1].value += ','
-                    parameters.children.insert(2, project_arg)
+                # if function_name.value.startswith('test'):
+                #     project_arg = parameters.children[1].clone()
+                #     project_arg.value = ' project, '
+                #     parameters.children[1].value += ','
+                #     parameters.children.insert(2, project_arg)
                     # project_arg = parameters.children[1].clone()
                     # project_arg.value = ' project_files'
                     # parameters.children.insert(3, project_arg)

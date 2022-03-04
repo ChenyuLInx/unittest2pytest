@@ -57,7 +57,6 @@ def delete_multiple_element(list_object, indices):
             list_object.pop(idx)
 
 def selector_update_func(node):
-    breakpoint()
     node.children[4].children[2].children[0].children[1] = node.children[4].children[2].children[0].children[1].children[2].children[1]
 
 
@@ -161,9 +160,9 @@ class FixRemoveClass(BaseFix):
                     project_arg.value = ' project, '
                     parameters.children[1].value += ','
                     parameters.children.insert(2, project_arg)
-                    project_arg = parameters.children[1].clone()
-                    project_arg.value = ' project_files'
-                    parameters.children.insert(3, project_arg)
+                    # project_arg = parameters.children[1].clone()
+                    # project_arg.value = ' project_files'
+                    # parameters.children.insert(3, project_arg)
 
                 # all things defined in a function
                 function_content = function_def.children[4]

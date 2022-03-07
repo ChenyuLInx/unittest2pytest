@@ -59,8 +59,9 @@ def generate_new_file(test_dir, output_dir):
                         fp.write(string_name + ' = """\n')
                         with open(os.path.join(dirpath, filename)) as f:
                             for line in f.readlines():
-                                fp.write(line)
-                        fp.write('"""\n\n')
+                                # there's issue around preious \ after write to file got ommited
+                                fp.write(line.replace('\\', '\\\\'))
+                        fp.write('\n"""\n\n')
                         write_place['"' + filename + '"'] = string_name
         # write all of the fixture for dirs in a project
         for dir_name, dir_dict in all_dir.items():
@@ -83,11 +84,10 @@ def generate_new_file(test_dir, output_dir):
     seed_copied = False
     for dirpath, _, filenames in os.walk(test_dir):
         for filename in filenames:
-            if filename == 'seed.sql':
+            if filename.startswith('seed') and filename.endswith('.sql'):
                 os.makedirs(os.path.join(output_dir, 'data'), exist_ok=True)
-                shutil.copyfile(os.path.join(dirpath,'seed.sql'), os.path.join(output_dir, 'data', 'seed.sql'))
+                shutil.copyfile(os.path.join(dirpath,filename), os.path.join(output_dir, 'data', filename))
                 seed_copied = True
-                break
 
     os.system("black %s" % os.path.join(output_dir, 'fixtures.py'))
 
@@ -103,7 +103,7 @@ def generate_new_file(test_dir, output_dir):
 import pytest
 
 from dbt.tests.util import run_dbt
-from tests.%s.fixtures import %s # noqa, F401
+from tests.%s.fixtures import %s # noqa: F401
 
 
                     """ % ('.'.join(output_dir.split('/')[-2:]), ','.join([dir_name.replace('-', '_') for dir_name in all_dir.keys()] + ['project_files']))

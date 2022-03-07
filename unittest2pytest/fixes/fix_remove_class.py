@@ -26,6 +26,7 @@ __copyright__ = "Copyright 2015-2019 by Hartmut Goebel"
 __licence__ = "GNU General Public License version 3 or later (GPLv3+)"
 
 
+from dbt.tests.fixtures.project import model_path
 from lib2to3.fixer_base import BaseFix
 from lib2to3.fixer_util import token, find_indentation
 from lib2to3.pytree import Leaf
@@ -116,10 +117,13 @@ class FixRemoveClass(BaseFix):
             child.children = [c for c in child.children if c.type != 278]
         
 
-        functions_to_remove = ['models', 'schema']
+        functions_to_remove = ['schema']
         function_name_map = {
             'project_config': 'project_config_update',
-            'selectors_config': 'selectors'
+            'selectors_config': 'selectors',
+            'profile_config': 'profiles_config_update',
+            'models': 'model_path',
+            'packages_config': 'packages',
         }
         function_process_map = {
             'selectors': selector_update_func
@@ -154,12 +158,12 @@ class FixRemoveClass(BaseFix):
                     # breakpoint()
                     continue
 
-                # this will replace self argument in test function definition to project
-                # if function_name.value.startswith('test'):
-                #     project_arg = parameters.children[1].clone()
-                #     project_arg.value = ' project, '
-                #     parameters.children[1].value += ','
-                #     parameters.children.insert(2, project_arg)
+                # this will add project fixture to test, sometime the function will be passed twice so we skip the second time
+                if function_name.value.startswith('test') and parameters.children[2].value != ' project, ':
+                    project_arg = parameters.children[1].clone()
+                    project_arg.value = ' project, '
+                    parameters.children[1].value += ','
+                    parameters.children.insert(2, project_arg)
                     # project_arg = parameters.children[1].clone()
                     # project_arg.value = ' project_files'
                     # parameters.children.insert(3, project_arg)
@@ -167,8 +171,9 @@ class FixRemoveClass(BaseFix):
                 # all things defined in a function
                 function_content = function_def.children[4]
                 
-                if '__postgres__' in function_name.value:
+                if 'postgres' in function_name.value:
                     function_name.value = function_name.value.replace('__postgres__', '_')
+                    function_name.value = function_name.value.replace('_postgres_', '_')
                 
                 # Update the functions that get changed between previous tests and current test
                 prev_is_self = False

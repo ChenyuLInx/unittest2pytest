@@ -60,8 +60,7 @@ def delete_multiple_element(list_object, indices):
 def selector_update_func(node):
     node.children[4].children[2].children[0].children[1] = node.children[4].children[2].children[0].children[1].children[2].children[1]
 
-
-class FixRemoveClass(BaseFix):
+class FixFunctions(BaseFix):
 
     PATTERN = """
       classdef< 'class' name=any '(' any ')' ':'

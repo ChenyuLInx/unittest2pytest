@@ -26,7 +26,7 @@ __copyright__ = "Copyright 2015-2019 by Hartmut Goebel"
 __licence__ = "GNU General Public License version 3 or later (GPLv3+)"
 
 
-from dbt.tests.fixtures.project import model_path
+# from dbt.tests.fixtures.project import model_path
 from lib2to3.fixer_base import BaseFix
 from lib2to3.fixer_util import token, find_indentation
 from lib2to3.pytree import Leaf
@@ -124,7 +124,9 @@ class FixRemoveClass(BaseFix):
             'profile_config': 'profiles_config_update',
             'models': 'model_path',
             'packages_config': 'packages',
+            'setUp': 'setup'
         }
+        auto_use_fixture = ['setup']
         function_process_map = {
             'selectors': selector_update_func
         }
@@ -148,14 +150,18 @@ class FixRemoveClass(BaseFix):
                 # replace functions
                 if function_name.value in function_name_map:
                     function_name.value = function_name_map[function_name.value]
-                    # add the fixture decorator
-                    dec_node = Node(278, [Leaf(50, '@'), Leaf(1, 'pytest.fixture\n    ')])
+                    
                     func_node = child.clone()
                     func_node.parent = None
                     if function_name.value in function_process_map:
                         function_process_map[function_name.value](func_node)
-                    suite.children[i] = Node(277, [dec_node, func_node])
-                    # breakpoint()
+                    # add a decorater in front by modify the def string
+                    dec = '@pytest.fixture(scope="class")\n    '
+                    if function_name.value in auto_use_fixture:
+                        dec = '@pytest.fixture(scope="class, autouse=True")\n    '
+                    func_node.children[0].value = dec + func_node.children[0].value
+
+                    suite.children[i] = func_node
                     continue
 
                 # this will add project fixture to test, sometime the function will be passed twice so we skip the second time

@@ -5,7 +5,7 @@ import argparse
 
 
 def write_dir_fixture(fp, dir_name, dir_dic):
-    fp.write('@pytest.fixture\ndef %s():\n    return ' % dir_name.replace('-', '_'))
+    fp.write('@pytest.fixture(scope="class")\ndef %s():\n    return ' % dir_name.replace('-', '_'))
     fp.write(str(dir_dic).replace('\'', ''))
     fp.write('\n\n')
 
@@ -68,7 +68,7 @@ def generate_new_file(test_dir, output_dir):
             write_dir_fixture(fp, dir_name, dir_dict)
         
         # create the project_files fixture
-        fp.write('@pytest.fixture\ndef project_files(project_root,')
+        fp.write('@pytest.fixture(scope="class")\ndef project_files(project_root,')
         for dir_name in all_dir.keys():
             fp.write(' %s,' % dir_name.replace('-', '_'))
         fp.write('):\n')

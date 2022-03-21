@@ -157,7 +157,7 @@ class FixFunctions(BaseFix):
                     # add a decorater in front by modify the def string
                     dec = '@pytest.fixture(scope="class")\n    '
                     if function_name.value in auto_use_fixture:
-                        dec = '@pytest.fixture(scope="class, autouse=True")\n    '
+                        dec = '@pytest.fixture(scope="class", autouse=True)\n    '
                     func_node.children[0].value = dec + func_node.children[0].value
 
                     suite.children[i] = func_node

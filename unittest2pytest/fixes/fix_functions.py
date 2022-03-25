@@ -165,6 +165,10 @@ class FixFunctions(BaseFix):
 
                 # this will add project fixture to test, sometime the function will be passed twice so we skip the second time
                 if function_name.value.startswith('test') and parameters.children[2].value != ' project, ':
+                    if parameters.children[1].type == 338:
+                        # this situation is hard to automate so just skip
+                        continue
+
                     project_arg = parameters.children[1].clone()
                     project_arg.value = ' project, '
                     parameters.children[1].value += ','

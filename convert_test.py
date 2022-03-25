@@ -56,12 +56,16 @@ def generate_new_file(test_dir, output_dir):
                     if not filename.endswith('pyc'):
                         whole_file_path = os.path.join(*curr_path[curr_path.index(test_dir_name) + 1:], filename)
                         string_name = whole_file_path.replace('.', '_').replace('/', '__').replace('-', '_')
-                        fp.write(string_name + ' = """\n')
+                        fp.write(string_name + ' = """')
+                        if not filename.endswith('csv'):
+                            fp.write('\n')
                         with open(os.path.join(dirpath, filename)) as f:
                             for line in f.readlines():
                                 # there's issue around preious \ after write to file got ommited
                                 fp.write(line.replace('\\', '\\\\'))
-                        fp.write('\n"""\n\n')
+                        if not filename.endswith('csv'):
+                            fp.write('\n')
+                        fp.write('"""\n\n')
                         write_place['"' + filename + '"'] = string_name
         # write all of the fixture for dirs in a project
         for dir_name, dir_dict in all_dir.items():

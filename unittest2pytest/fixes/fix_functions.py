@@ -183,6 +183,7 @@ class FixFunctions(BaseFix):
                 if 'postgres' in function_name.value:
                     function_name.value = function_name.value.replace('__postgres__', '_')
                     function_name.value = function_name.value.replace('_postgres_', '_')
+                    function_name.value = function_name.value.replace('__', '_')
                 
                 # Update the functions that get changed between previous tests and current test
                 prev_is_self = False

@@ -121,7 +121,7 @@ class FixFunctions(BaseFix):
             'project_config': 'project_config_update',
             'selectors_config': 'selectors',
             'profile_config': 'profiles_config_update',
-            'models': 'model_path',
+            'models': 'model_path(depreciated, update your model fixture to include only files needed for this tests)',
             'packages_config': 'packages',
             'setUp': 'setup'
         }
@@ -207,7 +207,10 @@ class FixFunctions(BaseFix):
                     # this would add table_comp. in the beginning of assertTablesEqual
                     if leaf.value == 'assertTablesEqual':
                         # leaf.prev_sibling.value = '.'
-                        leaf.parent.parent.children[0].value = 'table_comp'
+                        # leaf.parent.parent.children[0].value = 'table_comp'
+                        leaf.value = 'check_relations_equal'
+                        leaf.parent.parent.children[0].value = ''
+                        leaf.parent.parent.children[1].value = ''
                     
                     # if you want to replace a function(used inside function), can do it by
                     # if leaf.value == 'original name':
